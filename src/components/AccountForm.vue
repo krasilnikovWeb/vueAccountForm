@@ -11,23 +11,23 @@
       :key="index"
       class="account-row flex items-center space-x-4 mb-4"
     >
-      <div class="account-field flex-1">
+      <div class="account-field flex-none w-1/4">
         <label class="block text-sm font-medium text-gray-700">Метка:</label>
         <input
           v-model="account.label"
-          @blur="validateLabel(index)"
+          @blur="validateAccount(index)"
           maxlength="50"
           :class="{ 'border-red-500': !account.validLabel }"
           class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
         />
       </div>
-      <div class="account-field flex-1">
+      <div class="account-field flex-none w-1/4">
         <label class="block text-sm font-medium text-gray-700"
           >Тип записи:</label
         >
         <select
           v-model="account.accountType"
-          @change="validateAccountType(index)"
+          @change="validateAccount(index)"
           :class="{ 'border-red-500': !account.validAccountType }"
           class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
         >
@@ -35,11 +35,16 @@
           <option value="Локальная">Локальная</option>
         </select>
       </div>
-      <div class="account-field flex-1">
+      <div
+        :class="{
+          'flex-1': account.accountType === 'LDAP',
+          'flex-none w-1/4': account.accountType !== 'LDAP',
+        }"
+      >
         <label class="block text-sm font-medium text-gray-700">Логин:</label>
         <input
           v-model="account.login"
-          @blur="validateLogin(index)"
+          @blur="validateAccount(index)"
           maxlength="100"
           required
           :class="{ 'border-red-500': !account.validLogin }"
@@ -54,7 +59,7 @@
         <input
           type="password"
           v-model="account.password"
-          @blur="validatePassword(index)"
+          @blur="validateAccount(index)"
           maxlength="100"
           required
           :class="{ 'border-red-500': !account.validPassword }"
@@ -72,7 +77,8 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, watch, onMounted } from "vue";
+import { defineComponent, ref, onMounted } from "vue";
+import debounce from "lodash/debounce";
 
 export default defineComponent({
   setup() {
@@ -96,7 +102,7 @@ export default defineComponent({
       }
     };
 
-    const saveAccounts = () => {
+    const saveAccounts = debounce(() => {
       const validAccounts = accounts.value.filter(
         (account) =>
           account.validLabel &&
@@ -105,10 +111,10 @@ export default defineComponent({
           account.validPassword
       );
       localStorage.setItem("accounts", JSON.stringify(validAccounts));
-    };
+    }, 300);
 
     const addAccount = () => {
-      accounts.value.push({
+      const newAccount = {
         label: "",
         accountType: "LDAP",
         login: "",
@@ -117,7 +123,9 @@ export default defineComponent({
         validAccountType: true,
         validLogin: true,
         validPassword: true,
-      });
+      };
+      accounts.value.push(newAccount);
+      validateAccount(accounts.value.length - 1);
       saveAccounts();
     };
 
@@ -126,35 +134,19 @@ export default defineComponent({
       saveAccounts();
     };
 
-    const validateLabel = (index: number) => {
-      accounts.value[index].validLabel =
-        accounts.value[index].label.length > 0 &&
-        accounts.value[index].label.length <= 50;
-      saveAccounts();
-    };
-
-    const validateAccountType = (index: number) => {
-      accounts.value[index].validAccountType = ["LDAP", "Локальная"].includes(
-        accounts.value[index].accountType
+    const validateAccount = (index: number) => {
+      const account = accounts.value[index];
+      account.validLabel =
+        account.label.length > 0 && account.label.length <= 50;
+      account.validAccountType = ["LDAP", "Локальная"].includes(
+        account.accountType
       );
-      saveAccounts();
-    };
-
-    const validateLogin = (index: number) => {
-      accounts.value[index].validLogin =
-        accounts.value[index].login.length > 0 &&
-        accounts.value[index].login.length <= 100;
-      saveAccounts();
-    };
-
-    const validatePassword = (index: number) => {
-      if (accounts.value[index].accountType === "Локальная") {
-        accounts.value[index].validPassword =
-          accounts.value[index].password.length > 0 &&
-          accounts.value[index].password.length <= 100;
-      } else {
-        accounts.value[index].validPassword = true;
-      }
+      account.validLogin =
+        account.login.length > 0 && account.login.length <= 100;
+      account.validPassword =
+        account.accountType === "Локальная"
+          ? account.password.length > 0 && account.password.length <= 100
+          : true;
       saveAccounts();
     };
 
@@ -162,16 +154,11 @@ export default defineComponent({
       loadAccounts();
     });
 
-    watch(accounts, saveAccounts, { deep: true });
-
     return {
       accounts,
       addAccount,
       removeAccount,
-      validateLabel,
-      validateAccountType,
-      validateLogin,
-      validatePassword,
+      validateAccount,
     };
   },
 });
