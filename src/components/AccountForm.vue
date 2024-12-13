@@ -97,7 +97,14 @@ export default defineComponent({
     };
 
     const saveAccounts = () => {
-      localStorage.setItem("accounts", JSON.stringify(accounts.value));
+      const validAccounts = accounts.value.filter(
+        (account) =>
+          account.validLabel &&
+          account.validAccountType &&
+          account.validLogin &&
+          account.validPassword
+      );
+      localStorage.setItem("accounts", JSON.stringify(validAccounts));
     };
 
     const addAccount = () => {
