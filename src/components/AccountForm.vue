@@ -15,8 +15,9 @@
         <label class="block text-sm font-medium text-gray-700">Метка:</label>
         <input
           v-model="account.label"
-          @input="updateLabel(index)"
+          @blur="validateLabel(index)"
           maxlength="50"
+          :class="{ 'border-red-500': !account.validLabel }"
           class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
         />
       </div>
@@ -26,7 +27,8 @@
         >
         <select
           v-model="account.accountType"
-          @change="updateAccountType(index)"
+          @change="validateAccountType(index)"
+          :class="{ 'border-red-500': !account.validAccountType }"
           class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
         >
           <option value="LDAP">LDAP</option>
@@ -37,9 +39,10 @@
         <label class="block text-sm font-medium text-gray-700">Логин:</label>
         <input
           v-model="account.login"
-          @input="updateLogin(index)"
+          @blur="validateLogin(index)"
           maxlength="100"
           required
+          :class="{ 'border-red-500': !account.validLogin }"
           class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
         />
       </div>
@@ -51,9 +54,10 @@
         <input
           type="password"
           v-model="account.password"
-          @input="updatePassword(index)"
+          @blur="validatePassword(index)"
           maxlength="100"
           required
+          :class="{ 'border-red-500': !account.validPassword }"
           class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
         />
       </div>
@@ -73,7 +77,16 @@ import { defineComponent, ref, watch, onMounted } from "vue";
 export default defineComponent({
   setup() {
     const accounts = ref([
-      { label: "", accountType: "LDAP", login: "", password: "" },
+      {
+        label: "",
+        accountType: "LDAP",
+        login: "",
+        password: "",
+        validLabel: true,
+        validAccountType: true,
+        validLogin: true,
+        validPassword: true,
+      },
     ]);
 
     const loadAccounts = () => {
@@ -93,6 +106,10 @@ export default defineComponent({
         accountType: "LDAP",
         login: "",
         password: "",
+        validLabel: true,
+        validAccountType: true,
+        validLogin: true,
+        validPassword: true,
       });
       saveAccounts();
     };
@@ -102,30 +119,35 @@ export default defineComponent({
       saveAccounts();
     };
 
-    const updateLabel = (index: number) => (event: Event) => {
-      const target = event.target as HTMLInputElement;
-      accounts.value[index].label = target.value;
+    const validateLabel = (index: number) => {
+      accounts.value[index].validLabel =
+        accounts.value[index].label.length > 0 &&
+        accounts.value[index].label.length <= 50;
       saveAccounts();
     };
 
-    const updateAccountType = (index: number) => (event: Event) => {
-      const target = event.target as HTMLSelectElement;
-      accounts.value[index].accountType = target.value;
-      if (target.value === "LDAP") {
-        accounts.value[index].password = "";
+    const validateAccountType = (index: number) => {
+      accounts.value[index].validAccountType = ["LDAP", "Локальная"].includes(
+        accounts.value[index].accountType
+      );
+      saveAccounts();
+    };
+
+    const validateLogin = (index: number) => {
+      accounts.value[index].validLogin =
+        accounts.value[index].login.length > 0 &&
+        accounts.value[index].login.length <= 100;
+      saveAccounts();
+    };
+
+    const validatePassword = (index: number) => {
+      if (accounts.value[index].accountType === "Локальная") {
+        accounts.value[index].validPassword =
+          accounts.value[index].password.length > 0 &&
+          accounts.value[index].password.length <= 100;
+      } else {
+        accounts.value[index].validPassword = true;
       }
-      saveAccounts();
-    };
-
-    const updateLogin = (index: number) => (event: Event) => {
-      const target = event.target as HTMLInputElement;
-      accounts.value[index].login = target.value;
-      saveAccounts();
-    };
-
-    const updatePassword = (index: number) => (event: Event) => {
-      const target = event.target as HTMLInputElement;
-      accounts.value[index].password = target.value;
       saveAccounts();
     };
 
@@ -139,11 +161,17 @@ export default defineComponent({
       accounts,
       addAccount,
       removeAccount,
-      updateLabel,
-      updateAccountType,
-      updateLogin,
-      updatePassword,
+      validateLabel,
+      validateAccountType,
+      validateLogin,
+      validatePassword,
     };
   },
 });
 </script>
+
+<style scoped>
+.border-red-500 {
+  border-color: #f56565;
+}
+</style>
